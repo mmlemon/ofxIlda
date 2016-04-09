@@ -3,7 +3,7 @@
 //  ofxIlda
 //
 //  Created by Memo Akten on 09/05/2013.
-//
+//  Updated by Mitsuru Takeuchi on 02/06/2013.
 //
 
 
@@ -13,21 +13,16 @@
 #pragma once
 
 #include "ofMain.h"
+#include "ofxIldaPoly.h"
 #include "ofxIldaPoint.h"
+#include "ofxIldaPolyProcessor.h"
+
 
 namespace ofxIlda {
-    
+	
     class Frame {
     public:
         struct {
-            struct {
-                int smoothAmount;   // how much to smooth the path (zero to ignore)
-                float optimizeTolerance;    // howmuch to optimize the path, based on curvature (zero to ignore)
-                bool collapse;  // (not implemented yet)
-                int targetPointCount;   // how many points in total should ALL paths in this frame be resampled to (zero to ignore)
-                float spacing;  // desired spacing between points. Set automatically by targetPointCount, or set manually. (zero to ignore)
-            } path;
-            
             struct {
                 bool lines; // draw lines
                 bool points;    // draw points
@@ -46,8 +41,11 @@ namespace ofxIlda {
                     ofVec2f offset;
                     ofVec2f scale;
                 } transform;
+				int life;
             } output;
         } params;
+        
+        PolyProcessor polyProcessor; // params and functionality for processing the polys
         
         struct {
             int pointCountOrig;    // READONLY current total number of points across all paths (excluding blanks and end repititons)
@@ -58,18 +56,14 @@ namespace ofxIlda {
         //--------------------------------------------------------------
         Frame() {
             setDefaultParams();
+			
+			clear();
         }
         
         //--------------------------------------------------------------
         void setDefaultParams() {
             memset(&params, 0, sizeof(params));  // safety catch all default to zero
             memset(&stats, 0, sizeof(stats));  // safety catch all default to zero
-            
-            params.path.smoothAmount = 0;
-            params.path.optimizeTolerance = 0;
-            params.path.collapse = 0;
-            params.path.targetPointCount = 500;
-            params.path.spacing = 0;
             
             params.draw.lines = true;
             params.draw.points = true;
@@ -81,23 +75,23 @@ namespace ofxIlda {
             params.output.doCapX = false;
             params.output.doCapY = false;
             
-            params.output.transform.doFlipX = false;
-            params.output.transform.doFlipY = false;
+            params.output.transform.doFlipX = true;
+            params.output.transform.doFlipY = true;
             params.output.transform.offset.set(0, 0);
             params.output.transform.scale.set(1, 1);
+			params.output.life = 3;
+			
+			count = params.output.life;
+			
         }
         
         
         //--------------------------------------------------------------
-        string getParams() {
+        string getString() {
             stringstream s;
-            s << "params:" << endl;
-            s << "path.smoothAmount : " << params.path.smoothAmount << endl;
-            s << "path.optimizeTolerance : " << params.path.optimizeTolerance << endl;
-            s << "path.collapse : " << params.path.collapse << endl;
-            s << "path.targetPointCount : " << params.path.targetPointCount << endl;
-            s << "path.spacing : " << params.path.spacing << endl;
+            s << polyProcessor.getString();
             
+            s << "params:" << endl;
             s << "draw.lines : " << params.draw.lines << endl;
             s << "draw.point : " << params.draw.points << endl;
             s << "draw.pointNumbers : " << params.draw.pointNumbers << endl;
@@ -123,52 +117,43 @@ namespace ofxIlda {
         
         //--------------------------------------------------------------
         void update() {
-            float totalLength = 0;
-            vector<int> pathLengths;
-            processedPolys = origPolys;
-            for(int i=0; i<processedPolys.size(); i++) {
-                if(processedPolys[i].size()) {
-                    // smooth paths
-                    if(params.path.smoothAmount > 0) processedPolys[i] = processedPolys[i].getSmoothed(params.path.smoothAmount);
-                    
-                    // optimize paths
-                    if(params.path.optimizeTolerance > 0) processedPolys[i].simplify(params.path.optimizeTolerance);
-                    
-                    // calculate total length (needed for auto spacing calculation)
-                    if(params.path.targetPointCount > 0) {
-                        float l = processedPolys[i].getPerimeter();
-                        totalLength += l;
-                        pathLengths.push_back(l);
-                    }
-                } else {
-                    pathLengths.push_back(0);
-                }
-            }
-            
-            
-            // calculate spacing based on desired total number of points
-            if(params.path.targetPointCount > 0 && totalLength > 0) {
-                params.path.spacing = totalLength / params.path.targetPointCount;
-            }
-            
-            
-            // resample paths based on spacing (either as calculated by targetPointCount, or set by user)
-            if(params.path.spacing) {
-                for(int i=0; i<processedPolys.size(); i++) {
-                    processedPolys[i] = processedPolys[i].getResampledBySpacing(params.path.spacing);
-                }
-            }
-            
-            
+			std::stringstream ss;
+			ss << count;
+			ofDrawBitmapString(ss.str(), 0.0f, ofGetHeight()-50, 0);
+//			count--;
+//			if(count <= 0){
+//				if(origPolys.size() > 0){
+//					if(origPolys[0].getVertices().size() > 0){
+//						origPolys[0].deletevertexAt(0);
+//						if(origPolys[0].getVertices().size() <= 0){
+//							std::vector<ofxIlda::Poly>::iterator it = origPolys.erase(origPolys.begin() + 0);
+//						}
+//					}
+//				}
+//				count = params.output.life;
+//			}
+			
+			std::stringstream sss;
+			sss << origPolys.size() << ", ";
+			ofDrawBitmapString(sss.str(), 0.0f, ofGetHeight()-100, 0);
+			
+			
+			vector<ofPolyline> tmpPolys;
+            polyProcessor.update(convertToOfPolyline(origPolys), tmpPolys);
+            processedPolys = convertToPoly(tmpPolys);
+			
+			
             // get stats
             stats.pointCountOrig = 0;
             stats.pointCountProcessed = 0;
             for(int i=0; i<processedPolys.size(); i++) {
                 stats.pointCountOrig += origPolys[i].size();
                 stats.pointCountProcessed += processedPolys[i].size();
+				processedPolys[i].color = origPolys[i].color;
             }
             
             updateFinalPoints();
+			
         }
         
         
@@ -186,6 +171,8 @@ namespace ofxIlda {
                 ofSetLineWidth(2);
                 for(int i=0; i<processedPolys.size(); i++) {
                     ofPolyline &poly = processedPolys[i];
+					ofFloatColor &pcolor = processedPolys[i].color;
+					ofSetColor(pcolor.r*255, pcolor.g*255, pcolor.b*255);
                     poly.draw();
                     //            for(int i=0; i<data.size(); i++) {
                     //                ofPoint p0 = data[i];
@@ -201,7 +188,10 @@ namespace ofxIlda {
                 glPointSize(5);
                 for(int i=0; i<processedPolys.size(); i++) {
                     ofPolyline &poly = processedPolys[i];
-                    glBegin(GL_POINTS);
+                    ofFloatColor &pcolor = processedPolys[i].color;
+					ofSetColor(pcolor.r*255, pcolor.g*255, pcolor.b*255);
+                    
+					glBegin(GL_POINTS);
                     for(int i=0; i<poly.size(); i++) {
                         ofPoint &p = poly[i];
                         //                Point &p = data[i];
@@ -228,36 +218,50 @@ namespace ofxIlda {
         }
         
         //--------------------------------------------------------------
-        ofPolyline& addPoly() {
-            origPolys.push_back(ofPolyline());
-            return origPolys.back();
+        Poly& addPoly() {
+			Poly poly;
+			poly.color = params.output.color;
+            return addPoly(poly);
         }
         
         //--------------------------------------------------------------
-        ofPolyline& addPoly(const ofPolyline& poly) {
+        Poly& addPoly(const Poly& poly) {
             origPolys.push_back(poly);
             return origPolys.back();
         }
         
         //--------------------------------------------------------------
-        ofPolyline& addPoly(const vector<ofPoint> points) {
-            origPolys.push_back(ofPolyline(points));
-            return origPolys.back();
+        Poly& addPoly(const vector<ofPoint> points) {
+            return addPoly(Poly(points));
         }
         
         //--------------------------------------------------------------
-        ofPolyline& getPoly(int i) {
+        void addPolys(const vector<Poly> &polys) {
+            for(int i=0; i<polys.size(); i++) addPoly(polys[i]);
+        }
+        
+        //--------------------------------------------------------------
+        Poly& getPoly(int i) {
             return origPolys[i];
         }
         
         //--------------------------------------------------------------
-        ofPolyline& getPolyProcessed(int i) {
+        Poly& getPolyProcessed(int i) {
             return processedPolys[i];
         }
         
+        //--------------------------------------------------------------
+        vector<Poly> &getPolys() {
+            return origPolys;
+        }
         
         //--------------------------------------------------------------
-        ofPolyline& getLastPoly() {
+        vector<Poly> &getProcessedPolys() {
+            return processedPolys;
+        }
+        
+        //--------------------------------------------------------------
+        Poly& getLastPoly() {
             if(origPolys.empty()) addPoly();
             return origPolys.back();
         }
@@ -268,6 +272,23 @@ namespace ofxIlda {
             return points;
         }
         
+        //--------------------------------------------------------------
+        void drawCalibration() {
+            addPoly(Poly::fromRectangle(ofRectangle(0, 0, 1, 1)));
+            ofPolyline &p1 = addPoly();
+            p1.lineTo(0.25, 0.25);
+            p1.lineTo(0.75, 0.75);
+            
+            ofPolyline &p2 = addPoly();
+            p2.lineTo(0.75, 0.25);
+            p2.lineTo(0.25, 0.75);
+            
+            ofPolyline &p3 = addPoly();
+            float r = .25 * sqrt(2.0f);
+            p3.arc(0.5, 0.5, r, r, 0, 360, 60);
+
+        }
+
         //--------------------------------------------------------------
         ofPoint transformPoint(ofPoint p) const {
             // flip
@@ -308,6 +329,7 @@ namespace ofxIlda {
             points.clear();
             for(int i=0; i<processedPolys.size(); i++) {
                 ofPolyline &poly = processedPolys[i];
+                ofFloatColor &pcolor = processedPolys[i].color;
                 
                 if(poly.size() > 0) {
                     
@@ -321,17 +343,17 @@ namespace ofxIlda {
                     
                     // repeat at start
                     for(int n=0; n<params.output.endCount; n++) {
-                        points.push_back( Point(startPoint, params.output.color) );
+                        points.push_back( Point(startPoint, pcolor) );
                     }
                     
                     // add points
                     for(int j=0; j<poly.size(); j++) {
-                        points.push_back( Point(transformPoint(poly[j]), params.output.color) );
+                        points.push_back( Point(transformPoint(poly[j]), pcolor) );
                     }
                     
                     // repeat at end
                     for(int n=0; n<params.output.endCount; n++) {
-                        points.push_back( Point(endPoint, params.output.color) );
+                        points.push_back( Point(endPoint, pcolor) );
                     }
                     
                     // blanking at end
@@ -344,10 +366,27 @@ namespace ofxIlda {
         }
         
     protected:
-        vector<ofPolyline> origPolys;   // stores the original polys
-        vector<ofPolyline> processedPolys;  // stores the processed (smoothed, collapsed, optimized, resampled etc).
+        vector<Poly> origPolys;   // stores the original polys
+        vector<Poly> processedPolys;  // stores the processed (smoothed, collapsed, optimized, resampled etc).
         vector<Point> points;   // final points to send
         
-        
+		//--------------------------------------------------------------
+		vector<ofPolyline> convertToOfPolyline(vector<Poly> polys){
+			vector<ofPolyline> res;
+			for(int i = 0; i < polys.size(); i++){
+				res.push_back(polys[i]);
+			}
+			return res;
+		};
+		//--------------------------------------------------------------
+		vector<Poly> convertToPoly(vector<ofPolyline> polys){
+			vector<Poly> res;
+			for(int i = 0; i < polys.size(); i++){
+				res.push_back(Poly(polys[i].getVertices()));
+			}
+			return res;
+		};
+		
+		int count;
     };
 }

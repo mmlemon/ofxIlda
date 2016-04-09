@@ -35,6 +35,7 @@ namespace ofxIlda {
                 int cannyWindow;
                 bool doInvert;
                 bool doFindHoles;
+                int threshold;
             } cv;
             
             struct {
@@ -44,6 +45,7 @@ namespace ofxIlda {
             } draw;
         } params;
         
+        int contourMinSize;
         
         //--------------------------------------------------------------
         //--------------------------------------------------------------
@@ -56,6 +58,7 @@ namespace ofxIlda {
             
             colorImage.allocate(fbo.getWidth(), fbo.getHeight());
             greyImage.allocate(fbo.getWidth(), fbo.getHeight());
+            contourMinSize = 5;
         }
         
         
@@ -98,8 +101,9 @@ namespace ofxIlda {
             }
             
             if(params.cv.doInvert) greyImage.invert();
-            
-            contourFinder.findContours(greyImage, 5*5, greyImage.getWidth() * greyImage.getHeight(), 1000, params.cv.doFindHoles, false);
+            int minarea = contourMinSize * contourMinSize;
+            contourFinder.findContours(greyImage, minarea, greyImage.getWidth() * greyImage.getHeight(), 1000, params.cv.doFindHoles, false);
+//            contourFinder.findContours(greyImage, 1, greyImage.getWidth() * greyImage.getHeight(), 20, false, false);
             
             ofVec2f normalizer(1.0f/contourFinder.getWidth(), 1.0f/contourFinder.getHeight());
             for(int i=0; i<contourFinder.blobs.size(); i++) {

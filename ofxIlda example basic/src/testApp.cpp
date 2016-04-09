@@ -28,7 +28,7 @@ void testApp::draw() {
     etherdream.setPoints(ildaFrame);
     
     ofSetColor(255);
-    ofDrawBitmapString(ildaFrame.getParams(), 10, 30);
+    ofDrawBitmapString(ildaFrame.getString(), 10, 30);
 }
 
 //--------------------------------------------------------------
@@ -43,7 +43,10 @@ void testApp::keyPressed(int key){
             // draw rectangle
         case 'r': {
             ofPolyline p = ofPolyline::fromRectangle(ofRectangle(ofRandomuf()/2, ofRandomuf()/2, ofRandomuf()/2, ofRandomuf()/2));
-            ildaFrame.addPoly(p);
+//            ofxIlda::Poly poly = ofPolyline(p);
+//            ildaFrame.addPoly(p);
+//            ildaFrame.addPoly(poly);
+            ildaFrame.addPoly();
         }
             break;
 
@@ -62,12 +65,12 @@ void testApp::keyPressed(int key){
         case 'p': ildaFrame.params.draw.points ^= true; break;
             
             // adjust point count
-        case '.': ildaFrame.params.path.targetPointCount++; break;
-        case ',': if(ildaFrame.params.path.targetPointCount > 10) ildaFrame.params.path.targetPointCount--; break;
+        case '.': ildaFrame.polyProcessor.params.targetPointCount++; break;
+        case ',': if(ildaFrame.polyProcessor.params.targetPointCount > 10) ildaFrame.polyProcessor.params.targetPointCount--; break;
 
             // adjust point count quicker
-        case '>': ildaFrame.params.path.targetPointCount += 10; break;
-        case '<': if(ildaFrame.params.path.targetPointCount > 20) ildaFrame.params.path.targetPointCount -= 10; break;
+        case '>': ildaFrame.polyProcessor.params.targetPointCount += 10; break;
+        case '<': if(ildaFrame.polyProcessor.params.targetPointCount > 20) ildaFrame.polyProcessor.params.targetPointCount -= 10; break;
             
             // flip image
         case 'x': ildaFrame.params.output.transform.doFlipX ^= true; break;
@@ -88,6 +91,8 @@ void testApp::keyPressed(int key){
         case 's': ildaFrame.params.output.transform.scale.y -= 0.05; break;
         case 'a': ildaFrame.params.output.transform.scale.x -= 0.05; break;
         case 'd': ildaFrame.params.output.transform.scale.x += 0.05; break;
+            
+        case 'C': ildaFrame.drawCalibration(); break;
     }
 }
 
