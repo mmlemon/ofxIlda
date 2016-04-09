@@ -3,6 +3,9 @@
 //  ofxIlda
 //
 //  Created by Mitsuru Takeuchi on 02/06/2013.
+//  interactivelaser
+//
+//  Created by 武内 満 on 2013/06/02.
 //
 //
 

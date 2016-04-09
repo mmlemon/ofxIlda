@@ -120,22 +120,10 @@ namespace ofxIlda {
 			std::stringstream ss;
 			ss << count;
 			ofDrawBitmapString(ss.str(), 0.0f, ofGetHeight()-50, 0);
-//			count--;
-//			if(count <= 0){
-//				if(origPolys.size() > 0){
-//					if(origPolys[0].getVertices().size() > 0){
-//						origPolys[0].deletevertexAt(0);
-//						if(origPolys[0].getVertices().size() <= 0){
-//							std::vector<ofxIlda::Poly>::iterator it = origPolys.erase(origPolys.begin() + 0);
-//						}
-//					}
-//				}
-//				count = params.output.life;
-//			}
-			
-			std::stringstream sss;
-			sss << origPolys.size() << ", ";
-			ofDrawBitmapString(sss.str(), 0.0f, ofGetHeight()-100, 0);
+            
+//			std::stringstream sss;
+//			sss << origPolys.size() << ", ";
+//			ofDrawBitmapString(sss.str(), 0.0f, ofGetHeight()-100, 0);
 			
 			
 			vector<ofPolyline> tmpPolys;
